@@ -5,17 +5,8 @@
     'summary': 'Allow archiving invoices regardless of their state (including posted)',
     'description': """
         This module allows users to archive (set active=False) invoices
-        even when they are in the 'posted' state.
-
-        By default, Odoo prevents archiving posted journal entries/invoices.
-        This module overrides that restriction and adds a convenient
-        'Archive' / 'Unarchive' button on the invoice form view.
-
-        Features:
-        - Archive posted invoices (customer invoices & vendor bills)
-        - Bulk archive/unarchive from the list view
-        - Archive button directly on the invoice form
-        - Respects access rights (only Billing users can archive)
+        even when they are in the 'posted' state, and creates reversal
+        entries to clean all journal movements.
     """,
     'author': 'Custom',
     'website': '',
@@ -25,6 +16,7 @@
         'security/ir.model.access.csv',
         'views/account_move_views.xml',
     ],
+    'pre_init_hook': '_pre_init_add_active_field',
     'installable': True,
     'application': False,
     'auto_install': False,
