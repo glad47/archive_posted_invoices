@@ -36,13 +36,12 @@ class AccountMove(models.Model):
             },
         }
 
-    def _do_archive(self):
+    def action_do_archive(self):
         """Archive invoices: reverse posted ones, mark all as archived."""
         for move in self:
             if move.is_archived:
                 continue
 
-            # For posted moves: create a reversal to clean journal entries
             if move.state == 'posted':
                 reverse_wizard = self.env['account.move.reversal'].with_context(
                     active_model='account.move',
@@ -56,7 +55,6 @@ class AccountMove(models.Model):
 
                 reversal_result = reverse_wizard.reverse_moves()
 
-                # Find the reversal move
                 reversal_move = self.env['account.move']
                 if reversal_result and reversal_result.get('res_id'):
                     reversal_move = self.env['account.move'].browse(reversal_result['res_id'])
@@ -71,7 +69,6 @@ class AccountMove(models.Model):
 
                 if reversal_move:
                     move.archive_reversal_id = reversal_move.id
-                    # Also mark the reversal as archived
                     reversal_move.is_archived = True
                     _logger.info(
                         "Created reversal %s for archived invoice %s",
@@ -80,7 +77,7 @@ class AccountMove(models.Model):
 
             move.is_archived = True
 
-    def _do_unarchive(self):
+    def action_do_unarchive(self):
         """Unarchive invoices: reverse the reversal to restore journal entries."""
         for move in self:
             if not move.is_archived:
@@ -89,10 +86,8 @@ class AccountMove(models.Model):
             if move.archive_reversal_id and move.archive_reversal_id.state == 'posted':
                 reversal = move.archive_reversal_id
 
-                # Unarchive the reversal first
                 reversal.is_archived = False
 
-                # Reverse the reversal to restore original accounting
                 re_reverse_wizard = self.env['account.move.reversal'].with_context(
                     active_model='account.move',
                     active_ids=reversal.ids,
@@ -104,7 +99,6 @@ class AccountMove(models.Model):
                 })
                 re_reverse_wizard.reverse_moves()
 
-                # Re-archive the old reversal (cleanup)
                 reversal.is_archived = True
 
             move.is_archived = False
