@@ -5,17 +5,22 @@
         <field name="name">archive.invoice.wizard.form</field>
         <field name="model">archive.invoice.wizard</field>
         <field name="arch" type="xml">
-            <form string="Archive Invoices">
+            <form string="Archive / Unarchive Invoices">
                 <group>
-                    <p class="text-muted">
+                    <field name="action_type" invisible="1"/>
+                    <p attrs="{'invisible': [('action_type', '!=', 'archive')]}" class="text-muted">
                         This will create reversal entries for all posted invoices
                         to clean their journal movements, then mark them as archived.
+                    </p>
+                    <p attrs="{'invisible': [('action_type', '!=', 'unarchive')]}" class="text-muted">
+                        This will restore journal entries by reversing the reversal
+                        entries and mark invoices as active again.
                     </p>
                     <field name="move_ids" widget="many2many_tags" readonly="1"/>
                 </group>
                 <footer>
-                    <button name="action_confirm_archive"
-                            string="Confirm Archive"
+                    <button name="action_confirm"
+                            string="Confirm"
                             type="object"
                             class="btn-primary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>

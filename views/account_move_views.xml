@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Form View: Archive / Unarchive buttons -->
+    <!-- Form View: Archive / Unarchive buttons (both use wizards) -->
     <record id="view_move_form_archive_button" model="ir.ui.view">
         <field name="name">account.move.form.archive.button</field>
         <field name="model">account.move</field>
@@ -19,7 +19,7 @@
                         class="btn-secondary"
                         attrs="{'invisible': [('is_archived', '=', True)]}"
                         groups="account.group_account_invoice"/>
-                <button name="action_do_unarchive"
+                <button name="action_open_unarchive_wizard"
                         string="Unarchive"
                         type="object"
                         class="btn-secondary"
@@ -75,7 +75,7 @@
         <field name="state">code</field>
         <field name="code">
 if records:
-    records.action_do_archive()
+    action = records.action_open_archive_wizard()
         </field>
     </record>
 
@@ -88,7 +88,7 @@ if records:
         <field name="state">code</field>
         <field name="code">
 if records:
-    records.action_do_unarchive()
+    action = records.action_open_unarchive_wizard()
         </field>
     </record>
 
