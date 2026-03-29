@@ -1,3 +1,4 @@
+import json
 from . import models
 
 
@@ -27,9 +28,11 @@ def _pre_init_add_active_field(cr):
             (model_id,)
         )
         if not cr.fetchone():
+            # field_description is jsonb in Odoo 16, must pass as JSON
+            field_desc = json.dumps({"en_US": "Active"})
             cr.execute("""
                 INSERT INTO ir_model_fields
                     (model_id, model, name, field_description, ttype, state, store, readonly, copied)
                 VALUES
-                    (%s, 'account.move', 'active', 'Active', 'boolean', 'base', TRUE, FALSE, FALSE)
-            """, (model_id,))
+                    (%s, 'account.move', 'active', %s::jsonb, 'boolean', 'base', TRUE, FALSE, FALSE)
+            """, (model_id, field_desc))
