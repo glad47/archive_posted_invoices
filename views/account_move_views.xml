@@ -10,6 +10,10 @@
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="priority">99</field>
         <field name="arch" type="xml">
+            <!-- Add active field as hidden so it can be used in attrs -->
+            <xpath expr="//sheet" position="before">
+                <field name="active" invisible="1"/>
+            </xpath>
             <xpath expr="//header" position="inside">
                 <button name="action_archive"
                         string="Archive"
@@ -25,13 +29,12 @@
                         attrs="{'invisible': [('active', '=', True)]}"
                         groups="account.group_account_invoice"/>
             </xpath>
-            <!-- Show warning banner and reversal link when archived -->
+            <!-- Show warning banner when archived -->
             <xpath expr="//sheet" position="before">
                 <div class="alert alert-warning text-center mb-0"
                      role="alert"
                      attrs="{'invisible': [('active', '=', True)]}">
                     <strong>This invoice has been archived and its journal entries have been reversed.</strong>
-                    <field name="reversal_move_id" invisible="1"/>
                     <br/>
                     <button name="action_unarchive"
                             string="Click here to unarchive and restore journal entries"
