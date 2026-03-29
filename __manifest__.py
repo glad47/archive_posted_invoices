@@ -1,22 +1,21 @@
 {
     'name': 'Archive Posted Invoices',
-    'version': '16.0.1.0.0',
+    'version': '16.0.2.0.0',
     'category': 'Accounting',
-    'summary': 'Allow archiving invoices regardless of their state (including posted)',
+    'summary': 'Archive posted invoices with automatic journal reversal',
     'description': """
-        This module allows users to archive (set active=False) invoices
-        even when they are in the 'posted' state, and creates reversal
-        entries to clean all journal movements.
+        Archive invoices regardless of state (including posted).
+        Automatically creates reversal entries to clean journal movements.
+        Uses cancel/reverse approach - no active field hacks.
     """,
     'author': 'Custom',
-    'website': '',
     'license': 'LGPL-3',
     'depends': ['account'],
     'data': [
         'security/ir.model.access.csv',
+        'wizard/archive_invoice_wizard_views.xml',
         'views/account_move_views.xml',
     ],
-    'pre_init_hook': '_pre_init_add_active_field',
     'installable': True,
     'application': False,
     'auto_install': False,

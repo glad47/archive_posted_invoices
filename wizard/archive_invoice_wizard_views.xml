@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_archive_invoice_wizard_form" model="ir.ui.view">
+        <field name="name">archive.invoice.wizard.form</field>
+        <field name="model">archive.invoice.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Archive Invoices">
+                <group>
+                    <p class="text-muted">
+                        This will create reversal entries for all posted invoices
+                        to clean their journal movements, then mark them as archived.
+                    </p>
+                    <field name="move_ids" widget="many2many_tags" readonly="1"/>
+                </group>
+                <footer>
+                    <button name="action_confirm_archive"
+                            string="Confirm Archive"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

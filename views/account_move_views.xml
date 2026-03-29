@@ -2,7 +2,7 @@
 <odoo>
 
     <!-- ============================================================ -->
-    <!-- Form View: Add Archive / Unarchive button on invoice form     -->
+    <!-- Form View: Archive / Unarchive buttons                        -->
     <!-- ============================================================ -->
     <record id="view_move_form_archive_button" model="ir.ui.view">
         <field name="name">account.move.form.archive.button</field>
@@ -10,51 +10,53 @@
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="priority">99</field>
         <field name="arch" type="xml">
-            <!-- Add active field as hidden so it can be used in attrs -->
-            <xpath expr="//sheet" position="before">
-                <field name="active" invisible="1"/>
+            <!-- Add is_archived as hidden field -->
+            <xpath expr="//sheet" position="inside">
+                <field name="is_archived" invisible="1"/>
+                <field name="archive_reversal_id" invisible="1"/>
             </xpath>
+            <!-- Archive button in header -->
             <xpath expr="//header" position="inside">
-                <button name="action_archive"
+                <button name="action_open_archive_wizard"
                         string="Archive"
                         type="object"
                         class="btn-secondary"
-                        attrs="{'invisible': [('active', '=', False)]}"
-                        confirm="Are you sure you want to archive this invoice? This will create a reversal entry to clean all journal movements."
+                        attrs="{'invisible': [('is_archived', '=', True)]}"
                         groups="account.group_account_invoice"/>
-                <button name="action_unarchive"
+                <button name="_do_unarchive"
                         string="Unarchive"
                         type="object"
                         class="btn-secondary"
-                        attrs="{'invisible': [('active', '=', True)]}"
+                        attrs="{'invisible': [('is_archived', '=', False)]}"
                         groups="account.group_account_invoice"/>
             </xpath>
-            <!-- Show warning banner when archived -->
-            <xpath expr="//sheet" position="before">
-                <div class="alert alert-warning text-center mb-0"
+            <!-- Warning banner when archived -->
+            <xpath expr="//div[hasclass('oe_title')]" position="before">
+                <div class="alert alert-warning text-center"
                      role="alert"
-                     attrs="{'invisible': [('active', '=', True)]}">
-                    <strong>This invoice has been archived and its journal entries have been reversed.</strong>
-                    <br/>
-                    <button name="action_unarchive"
-                            string="Click here to unarchive and restore journal entries"
-                            type="object"
-                            class="btn-link p-0 ms-1"
-                            groups="account.group_account_invoice"/>
+                     attrs="{'invisible': [('is_archived', '=', False)]}">
+                    <strong>This invoice is archived. Its journal entries have been reversed.</strong>
                 </div>
-            </xpath>
-            <!-- Add reversal move link in the 'Other Info' tab -->
-            <xpath expr="//page[@id='other_tab_entry']//group[last()]" position="inside">
-                <field name="reversal_move_id"
-                       attrs="{'invisible': [('reversal_move_id', '=', False)]}"
-                       readonly="1"/>
-                <field name="archived_by_module" invisible="1"/>
             </xpath>
         </field>
     </record>
 
     <!-- ============================================================ -->
-    <!-- Search View: Add 'Archived' filter                           -->
+    <!-- Tree View: Show archived indicator                            -->
+    <!-- ============================================================ -->
+    <record id="view_move_tree_archive" model="ir.ui.view">
+        <field name="name">account.move.tree.archive</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='state']" position="after">
+                <field name="is_archived" string="Archived" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Search View: Archived filters                                 -->
     <!-- ============================================================ -->
     <record id="view_account_move_search_archive" model="ir.ui.view">
         <field name="name">account.move.search.archive</field>
@@ -64,42 +66,42 @@
             <xpath expr="//search/filter[last()]" position="after">
                 <separator/>
                 <filter string="Archived"
-                        name="archived"
-                        domain="[('active', '=', False)]"/>
-                <filter string="All (Including Archived)"
-                        name="all_including_archived"
-                        domain="['|', ('active', '=', True), ('active', '=', False)]"/>
+                        name="filter_archived"
+                        domain="[('is_archived', '=', True)]"/>
+                <filter string="Not Archived"
+                        name="filter_not_archived"
+                        domain="[('is_archived', '=', False)]"/>
             </xpath>
         </field>
     </record>
 
     <!-- ============================================================ -->
-    <!-- Server Action: Bulk Archive from list view                   -->
+    <!-- Server Action: Bulk Archive from list view                    -->
     <!-- ============================================================ -->
-    <record id="action_archive_invoices" model="ir.actions.server">
-        <field name="name">Archive Invoices (with reversal)</field>
+    <record id="action_bulk_archive_invoices" model="ir.actions.server">
+        <field name="name">Archive (with reversal)</field>
         <field name="model_id" ref="account.model_account_move"/>
         <field name="binding_model_id" ref="account.model_account_move"/>
         <field name="binding_view_types">list</field>
         <field name="state">code</field>
         <field name="code">
 if records:
-    action = records.action_archive_invoices()
+    records._do_archive()
         </field>
     </record>
 
     <!-- ============================================================ -->
-    <!-- Server Action: Bulk Unarchive from list view                 -->
+    <!-- Server Action: Bulk Unarchive from list view                  -->
     <!-- ============================================================ -->
-    <record id="action_unarchive_invoices" model="ir.actions.server">
-        <field name="name">Unarchive Invoices (restore entries)</field>
+    <record id="action_bulk_unarchive_invoices" model="ir.actions.server">
+        <field name="name">Unarchive (restore entries)</field>
         <field name="model_id" ref="account.model_account_move"/>
         <field name="binding_model_id" ref="account.model_account_move"/>
         <field name="binding_view_types">list</field>
         <field name="state">code</field>
         <field name="code">
 if records:
-    action = records.action_unarchive_invoices()
+    records._do_unarchive()
         </field>
     </record>
 
