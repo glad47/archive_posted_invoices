@@ -1,6 +1,5 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
-from datetime import date
 
 import logging
 
@@ -10,6 +9,13 @@ _logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = 'account.move'
 
+    # Odoo 16 account.move does NOT have an 'active' field by default
+    active = fields.Boolean(
+        string='Active',
+        default=True,
+        tracking=True,
+        help="If unchecked, the invoice will be hidden from default views.",
+    )
     reversal_move_id = fields.Many2one(
         'account.move',
         string='Reversal Entry',
@@ -23,18 +29,6 @@ class AccountMove(models.Model):
         copy=False,
         help="Indicates this invoice was archived via the Archive Posted Invoices module.",
     )
-
-    def write(self, vals):
-        """Override write to allow setting active=False on posted invoices.
-
-        Odoo 16 raises a UserError in account.move.write() when trying
-        to archive posted journal entries. This override detects the
-        'force_archive' context flag and bypasses the parent restriction
-        by calling the base Model.write() directly.
-        """
-        if self.env.context.get('force_archive') and 'active' in vals:
-            return models.Model.write(self, vals)
-        return super().write(vals)
 
     def _reverse_posted_moves(self):
         """Create reversal entries for all posted moves in self.
@@ -64,7 +58,7 @@ class AccountMove(models.Model):
                 active_ids=move.ids,
             ).create({
                 'reason': _('Archived: %s') % move.name,
-                'refund_method': 'cancel',  # Creates reversal and reconciles
+                'refund_method': 'cancel',
                 'date': fields.Date.context_today(self),
                 'journal_id': move.journal_id.id,
             })
@@ -73,21 +67,19 @@ class AccountMove(models.Model):
             reversal_result = reverse_wizard.reverse_moves()
 
             # Find the created reversal move
+            reversal_move = self.env['account.move']
             if reversal_result and reversal_result.get('res_id'):
                 reversal_move = self.env['account.move'].browse(reversal_result['res_id'])
             elif reversal_result and reversal_result.get('domain'):
                 domain = reversal_result['domain']
                 reversal_move = self.env['account.move'].search(domain, limit=1, order='id desc')
             else:
-                # Fallback: find reversal via reversed_entry_id
                 reversal_move = self.env['account.move'].search([
                     ('reversed_entry_id', '=', move.id),
                 ], limit=1, order='id desc')
 
             if reversal_move:
-                move.with_context(force_archive=True).write({
-                    'reversal_move_id': reversal_move.id,
-                })
+                move.write({'reversal_move_id': reversal_move.id})
                 reversal_moves |= reversal_move
                 _logger.info(
                     "Created reversal entry %s for invoice %s",
@@ -102,20 +94,18 @@ class AccountMove(models.Model):
 
     def action_archive(self):
         """Archive invoices: reverse posted entries, then deactivate."""
-        # Step 1: Reverse all posted moves (creates counter-entries)
+        # Step 1: Reverse all posted moves
         reversal_moves = self._reverse_posted_moves()
 
         # Step 2: Mark as archived by module
-        self.with_context(force_archive=True).write({
-            'archived_by_module': True,
-        })
+        self.write({'archived_by_module': True})
 
         # Step 3: Deactivate the original invoices
-        self.with_context(force_archive=True).write({'active': False})
+        self.write({'active': False})
 
-        # Step 4: Also archive the reversal entries (keep books clean)
+        # Step 4: Also archive the reversal entries
         if reversal_moves:
-            reversal_moves.with_context(force_archive=True).write({
+            reversal_moves.write({
                 'archived_by_module': True,
                 'active': False,
             })
@@ -125,14 +115,14 @@ class AccountMove(models.Model):
     def action_unarchive(self):
         """Unarchive invoices: reactivate and reverse the reversal entry."""
         # Step 1: Reactivate the invoices
-        self.with_context(force_archive=True).write({'active': True})
+        self.write({'active': True})
 
         for move in self:
             if move.reversal_move_id:
                 reversal = move.reversal_move_id
 
                 # Reactivate the reversal entry first
-                reversal.with_context(force_archive=True).write({'active': True})
+                reversal.write({'active': True})
 
                 # Reverse the reversal (restores original accounting)
                 if reversal.state == 'posted':
@@ -147,11 +137,11 @@ class AccountMove(models.Model):
                     })
                     re_reverse_wizard.reverse_moves()
 
-                # Then archive the old reversal entry (no longer needed)
-                reversal.with_context(force_archive=True).write({'active': False})
+                # Archive the old reversal entry
+                reversal.write({'active': False})
 
                 # Clear the link
-                move.with_context(force_archive=True).write({
+                move.write({
                     'reversal_move_id': False,
                     'archived_by_module': False,
                 })
